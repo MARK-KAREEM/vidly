@@ -1,17 +1,11 @@
 import React from "react";
 
-const Input = ({ name, value, label, onChange }) => {
+const Input = ({ name, label, error, ...rest }) => {
   return (
     <div className="form-group">
       <label htmlFor={name}>{label}</label>
-      <input
-        id={name}
-        value={value} // the form input have its own state,this is is to convert it to a controlled component
-        onChange={onChange}
-        name={name}
-        type="text"
-        className="form-control"
-      />
+      <input {...rest} name={name} id={name} className="form-control" />
+      {error && <div className="alert alert-danger">{error}</div>}
     </div>
   );
 };
