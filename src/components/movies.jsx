@@ -1,15 +1,16 @@
 import React, { Component } from "react";
-import { getMovies } from "../services/fakeMovieService";
+import { Link } from "react-router-dom";
+import propTypes from "prop-types";
+import _ from "lodash";
+import { toast } from "react-toastify";
+import { getMovies, deleteMovie } from "../services/movieService";
+import { getGenres } from "../services/genreService";
 import MoviesTable from "./moviesTable";
-import "../index.css";
 import Pagination from "./common/pagination";
 import paginate from "../utils/paginate";
-import propTypes from "prop-types";
 import ListGroup from "./common/listGroup";
-import { getGenres } from "../services/fakeGenreService";
-import _ from "lodash";
-import { Link } from "react-router-dom";
 import SearchBox from "./common/searchBox";
+import "../index.css";
 
 class Movies extends Component {
   state = {
@@ -22,14 +23,25 @@ class Movies extends Component {
     sortColumn: { path: "title", order: "asc" },
   };
 
-  componentDidMount() {
-    const genres = [{ _id: "", name: "All Genres" }, ...getGenres()];
-    this.setState({ movies: getMovies(), genres });
+  async componentDidMount() {
+    const { data } = await getGenres();
+    const { data: movies } = await getMovies();
+    const genres = [{ _id: "", name: "All Genres" }, ...data];
+    this.setState({ movies, genres });
   }
 
-  handleDelete = (movie) => {
-    const movies = this.state.movies.filter((m) => m._id !== movie._id);
+  handleDelete = async (movie) => {
+    const originalMovies = this.state.movies;
+    const movies = originalMovies.filter((m) => m._id !== movie._id);
     this.setState({ movies });
+
+    try {
+      await deleteMovie(movie._id);
+    } catch (ex) {
+      if (ex.response && ex.response.status === 404)
+        toast.error("This movie has already been deleted.");
+      else this.setState({ movies: originalMovies });
+    }
   };
 
   handleLike = (movie) => {
@@ -94,6 +106,7 @@ class Movies extends Component {
       sortColumn,
       searchQuery,
     } = this.state;
+    const { user } = this.props;
 
     if (count === 0)
       return <p className="body">There are no movies in the database</p>;
@@ -110,13 +123,15 @@ class Movies extends Component {
           />
         </div>
         <div className="col">
-          <Link
-            to="/movies/new"
-            className="btn btn-primary"
-            style={{ marginBottom: 20 }}
-          >
-            New Movie
-          </Link>
+          {user && (
+            <Link
+              to="/movies/new"
+              className="btn btn-primary"
+              style={{ marginBottom: 20 }}
+            >
+              New Movie
+            </Link>
+          )}
 
           <p>Showing {totalCount} movies in the database.</p>
 
@@ -129,6 +144,7 @@ class Movies extends Component {
             onSort={this.handleSort}
             sortColumn={sortColumn}
           />
+
           <Pagination
             itemsCount={totalCount}
             pageSize={pageSize}
